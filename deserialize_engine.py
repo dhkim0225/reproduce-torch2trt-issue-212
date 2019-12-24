@@ -5,7 +5,6 @@ TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
 
 def load_plugins():
-    # ctypes.CDLL('/opt/torch2trt/libtorch2trt.so')
     ctypes.CDLL('/opt/torch2trt/torch2trt/libtorch2trt.so')
 
     registry = trt.get_plugin_registry()
