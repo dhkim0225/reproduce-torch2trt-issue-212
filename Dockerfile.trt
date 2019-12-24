@@ -1,12 +1,9 @@
-# sudo docker run -it --gpus all --name=trt_server --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 -p8000:8000 -p8001:8001 -p8002:8002 -v/home/irteamsu/donghyun/trt_server/:/trt_server/ test/test:v1 bash
-#
-
 #######################################
 ## Install torch2trt in pytorch docker
 #######################################
 FROM nvcr.io/nvidia/pytorch:19.12-py3 AS torch_docker
 WORKDIR /opt
-RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git
+RUN git clone https://github.com/dhkim0225/torch2trt.git
 
 WORKDIR /opt/torch2trt
 RUN python -m pip install termcolor && \
@@ -23,6 +20,7 @@ RUN mkdir torch2trt
 
 # Copy custom operator
 COPY --from=torch_docker /opt/torch2trt/torch2trt/libtorch2trt.so /opt/torch2trt/
+RUN chmod 777 /opt/torch2trt/libtorch2trt.so
 
 # Copy libprotobuf
 COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf-lite.a /usr/lib/x86_64-linux-gnu/
@@ -49,5 +47,39 @@ COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.list /var/lib/dp
 COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.md5sums /var/lib/dpkg/info/
 COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.shlibs /var/lib/dpkg/info/
 COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.triggers /var/lib/dpkg/info/
+
+# copy pytorch libc10
+COPY --from=torch_docker /opt/conda/lib/python3.6/site-packages/torch/lib/libc10.so /opt/torch2trt/torch_lib/
+COPY --from=torch_docker /opt/conda/lib/python3.6/site-packages/torch/lib/libc10_cuda.so /opt/torch2trt/torch_lib/
+ENV LD_LIBRARY_PATH /opt/torch2trt/torch_lib/:$LD_LIBRARY_PATH
+
+
+#ARG ONNX_VER=1.6.0
+#ARG TRT_DEB_FILE=nv-tensorrt-repo-ubuntu1804-cuda10.2-trt7.0.0.11-ga-20191216_1-1_amd64.deb
+#ARG APT_KEY_FILE=/var/nv-tensorrt-repo-cuda10.2-trt7.0.0.11-ga-20191216/7fa2af80.pub
+############################################
+### update & install packages
+############################################
+#SHELL ["/bin/bash", "-c"]
+#
+#RUN apt-get -qq update && \
+#    apt-get -qq install -y curl wget vim htop git software-properties-common unzip zip unrar rar cmake gfortran && \
+#    apt-get -qq install -y build-essential libfreetype6-dev libhdf5-serial-dev libzmq3-dev pkg-config libsm6 libxext6 libxrender-dev
+#
+############################################
+### Install python 3.6
+############################################
+#RUN apt-get -qq update && \
+#    apt-get -qq install -y python3 python3-pip
+#
+############################################
+### Install TensorRT 7.0.0
+############################################
+#COPY ${TRT_DEB_FILE} /tmp/${TRT_DEB_FILE}
+#RUN dpkg -i /tmp/${TRT_DEB_FILE}
+#RUN apt-key add ${APT_KEY_FILE}
+#RUN apt-get -qq update && \
+#    apt-get -qq install -y tensorrt python3-libnvinfer-dev
+#
 
 CMD LD_PRELOAD=/opt/torch2trt/libtorch2trt.so trtserver --model-repository=/home/model/ --log-verbose=1

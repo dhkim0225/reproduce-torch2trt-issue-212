@@ -1,7 +1,10 @@
 FROM nvcr.io/nvidia/pytorch:19.12-py3
-WORKDIR /opt
-RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git
 
+# Install torch2trt
+WORKDIR /opt
+RUN git clone https://github.com/dhkim0225/torch2trt.git
 WORKDIR /opt/torch2trt
 RUN python -m pip install termcolor && \
     python setup.py install --plugins
+
+ENV LD_LIBRARY_PATH /opt/conda/lib/python3.6/site-packages/torch/lib:$LD_LIBRARY_PATH

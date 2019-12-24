@@ -8,6 +8,11 @@ Run pytorch docker and make .engine outputs with make_engine.py.
 sudo docker run --rm -v$(pwd):/home/ --gpus all test/test:torch2trt_cu102 python3 /home/make_engine.py
 ```
 
+Run pytorch docker and deserialize model.plan.
+```
+sudo docker run --rm -v$(pwd):/home/ --gpus all test/test:torch2trt_cu102 python3 /home/deserialize_engine.py
+```
+
 ### Build TRTIS docker (CUDA 10.2)
 ```
 sudo docker build -f Dockerfile.trt -t test/test:TRTIS .

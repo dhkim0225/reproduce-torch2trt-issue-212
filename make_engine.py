@@ -23,8 +23,8 @@ if __name__ == "__main__":
         model = TinyModel().to(device)
         model.eval()
         model_trt = torch2trt(model, [sample_input],
-                              input_names=None,
-                              output_names=None,
+                              input_names=['input_image:0'],
+                              output_names=['output:0'],
                               max_batch_size=1,
                               max_workspace_size=(1 << 32),
                               strict_type_constraints=False,
