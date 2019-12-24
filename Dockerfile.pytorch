@@ -1,0 +1,7 @@
+FROM nvcr.io/nvidia/pytorch:19.12-py3
+WORKDIR /opt
+RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git
+
+WORKDIR /opt/torch2trt
+RUN python -m pip install termcolor && \
+    python setup.py install --plugins

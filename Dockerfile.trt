@@ -1,0 +1,53 @@
+# sudo docker run -it --gpus all --name=trt_server --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 -p8000:8000 -p8001:8001 -p8002:8002 -v/home/irteamsu/donghyun/trt_server/:/trt_server/ test/test:v1 bash
+#
+
+#######################################
+## Install torch2trt in pytorch docker
+#######################################
+FROM nvcr.io/nvidia/pytorch:19.12-py3 AS torch_docker
+WORKDIR /opt
+RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt.git
+
+WORKDIR /opt/torch2trt
+RUN python -m pip install termcolor && \
+    python setup.py install --plugins
+
+
+#######################################
+## Setup trt_server
+#######################################
+FROM nvcr.io/nvidia/tensorrtserver:19.12-py3
+
+WORKDIR /opt
+RUN mkdir torch2trt
+
+# Copy custom operator
+COPY --from=torch_docker /opt/torch2trt/torch2trt/libtorch2trt.so /opt/torch2trt/
+
+# Copy libprotobuf
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf-lite.a /usr/lib/x86_64-linux-gnu/
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf-lite.so /usr/lib/x86_64-linux-gnu/
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf-lite.so.10 /usr/lib/x86_64-linux-gnu/
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf-lite.so.10.0.0 /usr/lib/x86_64-linux-gnu/
+
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf.a /usr/lib/x86_64-linux-gnu/
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf.so /usr/lib/x86_64-linux-gnu/
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf.so.10 /usr/lib/x86_64-linux-gnu/
+COPY --from=torch_docker /usr/lib/x86_64-linux-gnu/libprotobuf.so.10.0.0 /usr/lib/x86_64-linux-gnu/
+
+COPY --from=torch_docker /usr/share/doc/libprotobuf-dev /usr/share/doc/
+COPY --from=torch_docker /usr/share/doc/libprotobuf-lite10 /usr/share/doc/
+COPY --from=torch_docker /usr/share/doc/libprotobuf10 /usr/share/doc/
+
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf-dev:amd64.list /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf-dev:amd64.md5sums /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf-lite10:amd64.list /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf-lite10:amd64.md5sums /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf-lite10:amd64.shlibs /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf-lite10:amd64.triggers /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.list /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.md5sums /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.shlibs /var/lib/dpkg/info/
+COPY --from=torch_docker /var/lib/dpkg/info/libprotobuf10:amd64.triggers /var/lib/dpkg/info/
+
+CMD LD_PRELOAD=/opt/torch2trt/libtorch2trt.so trtserver --model-repository=/home/model/ --log-verbose=1
